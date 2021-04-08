@@ -1,6 +1,5 @@
 
-# Install Packages --------------------------------------------------------
-
+# Required Packages --------------------------------------------------------
 
 pkgReq <- c("tidyverse",
             "colorspace",
@@ -10,7 +9,8 @@ pkgReq <- c("tidyverse",
             "plotly",
             "RColorBrewer",
             "readxl",
-            "scales"
+            "scales",
+            "ggthemes"
             )
 lapply(pkgReq, require, character.only = TRUE)
 
@@ -48,13 +48,13 @@ levelsIndexEtf <- as.factor(c("VGTechETF",
 weightsRandomizerStock <- as.tibble((runif(8, min = 1, max = 2)))
 weightsRandomizerETFIndex <- as.tibble((runif(2, min = 1, max = 2)))
 #2021 80% Stocks 20% ETFs + Index
-weightsStock2021 <- (weightsRandomizer/sum(weightsRandomizer))*.8
+weightsStock2021 <- (weightsRandomizerStock/sum(weightsRandomizerStock))*.8
 weightsEtfIndex2021 <- (weightsRandomizerETFIndex/sum(weightsRandomizerETFIndex))*.2
 #2030 65% Stocks 35% ETFs + Index
-weightsStock2030 <- (weightsRandomizer/sum(weightsRandomizer))*.65
+weightsStock2030 <- (weightsRandomizerStock/sum(weightsRandomizerStock))*.65
 weightsEtfIndex2030 <- (weightsRandomizerETFIndex/sum(weightsRandomizerETFIndex))*.35
 #2040 30% Stocks 70% ETFs + Index
-weightsStock2040 <- (weightsRandomizer/sum(weightsRandomizer))*.30
+weightsStock2040 <- (weightsRandomizerStock/sum(weightsRandomizerStock))*.30
 weightsEtfIndex2040 <- (weightsRandomizerETFIndex/sum(weightsRandomizerETFIndex))*.70
 
 weightsStockAll <- cbind(weightsStock2021, weightsStock2030, weightsStock2040)
@@ -69,56 +69,32 @@ colnames(portfolioStock) <- c("Asset","2021", "2030", "2040")
 
 portfolioEtfIndex <- cbind(levelsIndexEtf, weightsAllEtfIndexAll)
 colnames(portfolioEtfIndex) <- c("Asset","2021", "2030", "2040")
-portfolioMaster <- rbind(portfolioStock, portfolioEtfIndex)
 
-# Create Factor Levels for Sorting ----------------------------------------
+portfolioMaster <- rbind(portfolioStock, portfolioEtfIndex)
 
 
 
 # Plot Asset Weights ------------------------------------------------------
-
-assetWeight2021 <- ggplot(asset2021, aes(x = asset, y = assetWeights)) +
-  geom_bar(stat = 'identity',
-           fill = "cadetblue3") +
-  labs(x = "Asset",
-       y = "Asset Weight",
-       title = "2021 Asset Weights for myOverpricedTM Retirement Fund"
-  ) +
-  theme_light() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 16))
-print(assetWeight2021)
-
-assetWeight2030 <- ggplot(asset2030, aes(x = asset, y = assetWeights)) +
-  geom_bar(stat = 'identity',
-           fill = "cadetblue3") +
-  labs(x = "Asset",
-       y = "Asset Weight",
-       title = "2030 Asset Weights for myOverpricedTM Retirement Fund"
-  ) +
-  theme_light() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 16))
-
-print(assetWeight2030)
-
-assetWeight2040 <- ggplot(asset2040, aes(x = asset, y = assetWeights)) +
-  geom_bar(stat = 'identity',
-           fill = "cadetblue3") +
-  labs(x = "Asset",
-       y = "Asset Weight",
-       title = "2040 Asset Weights for myOverpricedTM Retirement Fund"
-  ) +
-  theme_light() +
-  theme(plot.title = element_text(hjust = 0.5,
-                                  face = "bold",
-                                  size = 16))
-
-print(assetWeight2040)
+plotWeights <- ggplot(portfolioMaster, aes(x = Asset)) +
+  geom_point(aes(y = `2021`, colour = "2021"),
+             size = 4) +
+  geom_point(aes(y = `2030`, colour = "2030"),
+             size = 4) +
+  geom_point(aes(y = `2040`,colour = "2040"),
+             size = 4) +
+  scale_colour_manual(name = "Year", values = c(`2021` = "red", `2030` = "steelblue", `2040` = "springgreen4")) +
+  labs(y = "Asset Weight",
+       title = "RetireinDebt 2021-2040 Portfolio Asset Weights",
+       subtitle = "RiD uses a randomized weights algorithm to hedge against holding onto underperforming assets in the long run") +
+  ggthemes::theme_economist() 
 
 
-# Plot Asset Factors ------------------------------------------------------
+ggplotly(plotWeights, dynamicTicks = TRUE) %>%
+  layout(title = list(text = paste0("RetireinDebt 2021-2040 Portfolio Asset Weights",
+                                    "<br>",
+                                    "<sup>",
+                                    "RiD uses a randomized weights algorithm to hedge against holding onto underperforming assets in the long run")))
+
+
 
 
