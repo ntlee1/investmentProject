@@ -68,9 +68,107 @@ AdjCloseAmz <- portfolioData %>%
 ggplotly(AdjCloseAmz)
 
 
-# Monthly Returns ----------------------------------------------------------
-mnthReturns <- portfolioData
+# Monthly Returns Function ----------------------------------------------------------
+ #Working Function for Market Returns
+#EDIT should i use different variable names so i dont interfere with scripts? Yes! Clean up variable names
+#EDIT I solved the assignment issue by putting the actual read variable inside, i think this means everything should be self contained including any read csv functions
+#EDIT i wonder how i can generalize the read function? so i can use with any csv file
+#EDIT how can i generalize to put in a vector of all start and end asset row positions?
+#EDIT add to master R notes
+#EDIT how can i automatically generate list of start and end row positions for each new factor
+#EDIT add function explanation
 
+assetReturnList <- function(priorAssetRowEnd, nextAssetRowStart){
+  aslReadData <- list.files(path = "Data/assets", pattern = "*.csv", full.names = TRUE)
+  aslPortfolioData <- sapply(aslReadData, read_csv, simplify = FALSE) %>%
+    bind_rows(.id = "id")
+  
+  aslPortfolioData$id <- plyr::revalue(aslPortfolioData$id, c("Data/assets/ABT.csv" = "Abbott",
+                                                        "Data/assets/AMZN.csv" = "Amazon",
+                                                        "Data/assets/DG.csv" = "Dollar General",
+                                                        "Data/assets/JPM.csv" = "JPMorg",
+                                                        "Data/assets/LYV.csv" = "LiveNat",
+                                                        "Data/assets/MAR.csv" = "Marriott",
+                                                        "Data/assets/TM.csv" = "Toyota",
+                                                        "Data/assets/UNH.csv" = "UNHealth",
+                                                        "Data/assets/VGT.csv" = "VGETF",
+                                                        "Data/assets/VOO.csv" = "VGIndex"))
+  aslPortfolioData$id <- as.factor(aslPortfolioData$id)
+
+  aslMnthReturns <- aslPortfolioData %>%
+    mutate(closeReturn = (aslPortfolioData$`Adj Close`/ lag(aslPortfolioData$`Adj Close`, n = 1) - 1))
+  
+  aslMnthReturns$closeReturn[1:(priorAssetRowEnd + 1)] <- NA
+  aslMnthReturns$closeReturn[nextAssetRowStart:nrow(aslPortfolioData)] <- NA
+  aslMnthReturns$closeReturn[is.na(aslMnthReturns$closeReturn)] <- 0
+
+  print(paste("This is monthly returns for",aslPortfolioData$id[priorAssetRowEnd + 1]))
+  print(aslMnthReturns[priorAssetRowEnd + 1:nextAssetRowStart -1,])
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Make yourDataColumnName more robust
+#must be exact match and include ticks if required
+assetReturnList <- function(yourData, yourDataColumnName, priorAssetRowEnd, nextAssetRowStart){
+  aslPortfolioData <<- yourData
+  
+yourDataCloseColumn <<- yourDataColumnName
+
+  aslMnthReturns <- aslPortfolioData %>%
+    mutate(closeReturn = (yourDataColumnName/lag(yourDataColumnName, n = 1) - 1))
+  
+  aslMnthReturns$closeReturn[1:(priorAssetRowEnd + 1)] <- NA
+  aslMnthReturns$closeReturn[nextAssetRowStart:nrow(aslPortfolioData)] <- NA
+  aslMnthReturns$closeReturn[is.na(aslMnthReturns$closeReturn)] <- 0
+  
+  print(paste("This is monthly returns for",aslPortfolioData$id[priorAssetRowEnd + 1]))
+  print(aslMnthReturns[priorAssetRowEnd + 1:nextAssetRowStart -1,])
+}
+
+
+
+
+assetReturnList(portfolioData,portfolioData$`Adj Close`, 0, 61)
+
+
+portfolioData$Close
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Monthly Returns Plot ----------------------------------------------------
+#EDIT Now i need to figure out how to use the asl function to create plots
+mnthReturnsPlot <- ggplot(mnthReturns, aes(x = `Date`, y = closeReturn)) +
+  geom_line() +
+  facet_wrap(~id) + 
+  scale_y_continuous(limits = c(-1,1))
+
+ggplotly(mnthReturnsPlot)
 
 
 
