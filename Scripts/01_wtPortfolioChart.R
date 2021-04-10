@@ -86,7 +86,7 @@ plotWeights <- ggplot(portfolioMaster, aes(x = Asset)) +
   labs(y = "Asset Weight",
        title = "RetireinDebt 2021-2040 Portfolio Asset Weights",
        subtitle = "RiD uses a randomized weights algorithm to hedge against holding onto underperforming assets in the long run") +
-  ggthemes::theme_economist() 
+  ggthemes::theme_solarized() 
 
 
 ggplotly(plotWeights, dynamicTicks = TRUE) %>%
