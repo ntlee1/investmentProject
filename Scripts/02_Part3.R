@@ -68,120 +68,84 @@ AdjCloseAmz <- portfolioData %>%
 ggplotly(AdjCloseAmz)
 
 
-# Monthly Returns Function ----------------------------------------------------------
- #Working Function for Market Returns
-#EDIT should i use different variable names so i dont interfere with scripts? Yes! Clean up variable names
-#EDIT I solved the assignment issue by putting the actual read variable inside, i think this means everything should be self contained including any read csv functions
-#EDIT i wonder how i can generalize the read function? so i can use with any csv file
-#EDIT how can i generalize to put in a vector of all start and end asset row positions?
-#EDIT add to master R notes
-#EDIT how can i automatically generate list of start and end row positions for each new factor
-#EDIT add function explanation
+#Monthly Returns Function: Takes a dataframe with multiple factors in the same column and gives monthly returns for each different type of asset ----------------------------------------------------------
+#EDIT
+#Do I need to use different variable names to avoid overwriting global variables?
+#Instead of close col row start and close col row end, use the id name for robustness
+#ERROR: closeColRowEnd = 600 
 
-assetReturnList <- function(priorAssetRowEnd, nextAssetRowStart){
-  aslReadData <- list.files(path = "Data/assets", pattern = "*.csv", full.names = TRUE)
-  aslPortfolioData <- sapply(aslReadData, read_csv, simplify = FALSE) %>%
-    bind_rows(.id = "id")
+#NOTES
+#I solved the assignment issue by putting the actual read variable inside, i think this means everything should be self contained including any read csv functions
+#add to master R notes
+
+
+assetReturnList <- function(data, dataColumnClose, closeColRowStart, closeColRowEnd) {
+  aslPortfolioData <<- data
   
-  aslPortfolioData$id <- plyr::revalue(aslPortfolioData$id, c("Data/assets/ABT.csv" = "Abbott",
-                                                        "Data/assets/AMZN.csv" = "Amazon",
-                                                        "Data/assets/DG.csv" = "Dollar General",
-                                                        "Data/assets/JPM.csv" = "JPMorg",
-                                                        "Data/assets/LYV.csv" = "LiveNat",
-                                                        "Data/assets/MAR.csv" = "Marriott",
-                                                        "Data/assets/TM.csv" = "Toyota",
-                                                        "Data/assets/UNH.csv" = "UNHealth",
-                                                        "Data/assets/VGT.csv" = "VGETF",
-                                                        "Data/assets/VOO.csv" = "VGIndex"))
-  aslPortfolioData$id <- as.factor(aslPortfolioData$id)
-
+  yourDataCloseColumn <<- dataColumnClose
+  
   aslMnthReturns <- aslPortfolioData %>%
-    mutate(closeReturn = (aslPortfolioData$`Adj Close`/ lag(aslPortfolioData$`Adj Close`, n = 1) - 1))
+    mutate(closeReturnMonthly = (yourDataCloseColumn/lag(yourDataCloseColumn, n = 1) - 1))
   
-  aslMnthReturns$closeReturn[1:(priorAssetRowEnd + 1)] <- NA
-  aslMnthReturns$closeReturn[nextAssetRowStart:nrow(aslPortfolioData)] <- NA
-  aslMnthReturns$closeReturn[is.na(aslMnthReturns$closeReturn)] <- 0
-
-  print(paste("This is monthly returns for",aslPortfolioData$id[priorAssetRowEnd + 1]))
-  print(aslMnthReturns[priorAssetRowEnd + 1:nextAssetRowStart -1,])
+  aslMnthReturns$closeReturnMonthly[1:(closeColRowStart)] <- NA
+  aslMnthReturns$closeReturnMonthly[(closeColRowEnd + 1):nrow(aslPortfolioData)] <- NA
+  aslMnthReturns$closeReturnMonthly[is.na(aslMnthReturns$closeReturnMonthly)] <- 0
+  
+  print(paste("This is monthly returns for",aslPortfolioData$id[closeColRowStart]))
+  print(aslMnthReturns[closeColRowStart:closeColRowEnd,])
 }
 
 
+# EDIT: Failed attempt at creating for loop to iteratively cycle through args [3,4] of assetReturnList() -----------------------------------------------------------------
+
+allMnthClose <- list(assetReturnList(portfolioData, portfolioData$`Adj Close`, 1, 60),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 61, 120),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 121, 180),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 181, 240),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 241, 300),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 301, 360),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 361, 420),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 421, 480),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 481, 540),
+                     assetReturnList(portfolioData, portfolioData$`Adj Close`, 541, 599))
+
+                     
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-#Make yourDataColumnName more robust
-#must be exact match and include ticks if required
-assetReturnList <- function(yourData, yourDataColumnName, priorAssetRowEnd, nextAssetRowStart){
-  aslPortfolioData <<- yourData
-  
-yourDataCloseColumn <<- yourDataColumnName
-
-  aslMnthReturns <- aslPortfolioData %>%
-    mutate(closeReturn = (yourDataColumnName/lag(yourDataColumnName, n = 1) - 1))
-  
-  aslMnthReturns$closeReturn[1:(priorAssetRowEnd + 1)] <- NA
-  aslMnthReturns$closeReturn[nextAssetRowStart:nrow(aslPortfolioData)] <- NA
-  aslMnthReturns$closeReturn[is.na(aslMnthReturns$closeReturn)] <- 0
-  
-  print(paste("This is monthly returns for",aslPortfolioData$id[priorAssetRowEnd + 1]))
-  print(aslMnthReturns[priorAssetRowEnd + 1:nextAssetRowStart -1,])
-}
-
-
-
-
-assetReturnList(portfolioData,portfolioData$`Adj Close`, 0, 61)
-
-
-portfolioData$Close
-
-
-
-
-
-
-
-
-
-
-
-
-
+allMnthClose <- bind_rows(allMnthClose)
 
 
 # Monthly Returns Plot ----------------------------------------------------
-#EDIT Now i need to figure out how to use the asl function to create plots
-mnthReturnsPlot <- ggplot(mnthReturns, aes(x = `Date`, y = closeReturn)) +
-  geom_line() +
-  facet_wrap(~id) + 
-  scale_y_continuous(limits = c(-1,1))
+mnthReturnPlot <- ggplot(allMnthClose, aes(x = Date, y = closeReturnMonthly)) +
+  geom_point(size = 0.75) +
+  facet_wrap(~id) +
+  labs(title = "Monthly Returns 2016-2021 RiD Portfolio",
+       y = "Monthly Returns") +
+  ggthemes::theme_solarized()
 
-ggplotly(mnthReturnsPlot)
-
-
-
+ggplotly(mnthReturnPlot)
 
 
 
+# Average monthly return --------------------------------------------------
+#EDIT: For loop?
 
+unique(allMnthClose$id)
+avgMthReturnList <- list(filter(allMnthClose, id == "Abbott"),
+                     filter(allMnthClose, id == "Amazon"),
+                     filter(allMnthClose, id == "Dollar General"),
+                     filter(allMnthClose, id == "JPMorg"),
+                     filter(allMnthClose, id == "LiveNat"),
+                     filter(allMnthClose, id == "Marriott"),
+                     filter(allMnthClose, id == "Toyota"),
+                     filter(allMnthClose, id == "UNHealth"),
+                     filter(allMnthClose, id == "VGETF"),
+                     filter(allMnthClose, id == "VGIndex"))
 
+allMnthClose %>%
+  dplyr::group_by(id) %>%
+  mean(closeReturnMonthly)
 
+mean(allMnthClose$closeReturnMonthly)
 
-
-
-
-
-
-
+lapply(avgMthReturnList, mean)
