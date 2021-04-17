@@ -51,7 +51,7 @@ ggplotly(adjCloseAmz)
 #For some reason ifelse function cycles over my code more than necessary
 #dont know how to handle na in function
 #Split the data up, apply function to individual lists, then flatten
-mthRt <- function(x) {
+lagRt <- function(x) {
   (x-lag(x, n = 1))/x
 }
 
@@ -65,24 +65,16 @@ portfolioDataMthRt <- portfolioData %>%
 #How should i handle NAs? 
 #double flatten to get vector
 portfolioData$MthRt <- portfolioDataMthRt %>%
-  map(mthRt) %>%
+  map(lagRt) %>%
   flatten %>%
   flatten %>%
   unlist 
 
 
-
-
-
-
-
-# EDIT: Failed attempt at creating for loop to iteratively cycle through args [3,4] of assetReturnList() -----------------------------------------------------------------
-
-
 # Monthly Returns Plot ----------------------------------------------------
-mnthReturnPlot <- ggplot(allMnthClose, aes(x = Date, y = closeReturnMonthly)) +
+mnthReturnPlot <- ggplot(portfolioData, aes(x = Date, y = MthRt)) +
   geom_point(size = 0.75) +
-  facet_wrap(~id) +
+  facet_wrap(~`Asset Name`) +
   labs(title = "Monthly Returns 2016-2021 RiD Portfolio",
        y = "Monthly Returns") +
   ggthemes::theme_solarized()
@@ -91,166 +83,82 @@ ggplotly(mnthReturnPlot)
 
 
 
-# Average monthly return --------------------------------------------------
-#EDIT: For loop? 
-#Cant get mean to work, workaround used
-#Actually i need average monthly return for each year
-
-unique(allMnthClose$id)
-avgMthReturnFilter <- list((((filter(portfolioData, Date == "2017-03-01")[7]) - (filter(portfolioData, Date == "2016-04-01")[7]))/(filter(portfolioData, Date == "2016-04-01")[7]))/12,
-                           (((filter(portfolioData, Date == "2018-03-01")[7]) - (filter(portfolioData, Date == "2017-04-01")[7]))/(filter(portfolioData, Date == "2017-04-01")[7]))/12,
-                           (((filter(portfolioData, Date == "2019-03-01")[7]) - (filter(portfolioData, Date == "2018-04-01")[7]))/(filter(portfolioData, Date == "2018-04-01")[7]))/12,
-                           (((filter(portfolioData, Date == "2020-03-01")[7]) - (filter(portfolioData, Date == "2019-04-01")[7]))/(filter(portfolioData, Date == "2019-04-01")[7]))/12,
-                           (((filter(portfolioData, Date == "2021-03-01")[7]) - (filter(portfolioData, Date == "2020-04-01")[7]))/(filter(portfolioData, Date == "2020-04-01")[7]))/12)
+# Average Annual return --------------------------------------------------
+#Filter data first
+#Used which to match data
+#Sorted data by order
 
 
-avgMthReturnFilterTbl <- rbind(avgMthReturnFilter[[1]],
-                               avgMthReturnFilter[[2]],
-                               avgMthReturnFilter[[3]],
-                               avgMthReturnFilter[[4]],
-                               avgMthReturnFilter[[5]])
-avgMthReturnFilterTbl$Asset <- c(levels(allMnthClose$id))
-avgMthReturnFilterTbl$Year <- c(rep(c(2017, 2018, 2019, 2020, 2021), times = c(10, 10, 10, 10, 10)))
-colnames(avgMthReturnFilterTbl)[1] <- c("Average Monthly Return")
+#April 01 to Mar 01 #Which to return all matches
+annYrs <- c(seq.Date(from = as.Date("2016-04-01"),
+                     to = as.Date("2020-04-01"), "years"),
+            seq.Date(from = as.Date("2017-03-01"), to = as.Date("2021-03-01"),
+                     "years"))
 
-#Plot
-avgAnnualReturnFilterPlot <- ggplot(avgMthReturnFilterTbl, aes(x = Year, y = `Average Monthly Return`)) +
-  geom_point() +
-  facet_wrap(~Asset) +
-  labs(title = "Average Monthly Return RiD Portfolio") +
+
+portfolioDataAnnRt <- portfolioData[c(which(portfolioData$Date %in% annYrs)),] %>%
+  split(rep(1:10, each = 10)) %>%
+  lapply("[", c("Adj Close")) %>%
+  map(lagRt) %>%
+  flatten %>%
+  flatten %>%
+  unlist 
+
+ascDate <- annYrs[order(annYrs)] %>%
+  rep(times = 10)
+
+annAssetNms  <- rep(c("Abbott",
+                       "Amazon",
+                       "Dollar General",
+                       "JPMorg",
+                       "LiveNat",
+                       "Marriott",
+                       "Toyota",
+                       "UNHealth",
+                       "VGETF",
+                       "VGIndex"), each = 10)
+
+
+
+#data frame is better than cbind because it can hold multiple data types
+portfolioDataAnnRt <- data.frame(annAssetNms,portfolioDataAnnRt, ascDate)
+colnames(portfolioDataAnnRt) <- c("Asset Name", "Annual Return", "Date")
+
+
+# Annual Returns Plot -----------------------------------------------------
+
+annReturnPlot <- ggplot(portfolioDataAnnRt, aes(x = Date, y = `Annual Return`)) +
+  geom_point(size = 0.75) +
+  facet_wrap(~`Asset Name`) +
+  labs(title = "Annual Returns 2016-2021 RiD Portfolio",
+       y = "Annual Returns") +
   ggthemes::theme_solarized()
 
-ggplotly(avgAnnualReturnFilterPlot, dynamicTicks = TRUE) %>%
-  layout(title = list(text = paste0("Average Monthly Return RiD Portfolio (Year Start April 01)")))
+ggplotly(annReturnPlot)
 
 
-#Average Annual Return -----------------------------------------------------------
-#Simplify
-avgAnnualReturnFilter <- list(((filter(portfolioData, Date == "2017-03-01")[7] - filter(portfolioData, Date == "2016-04-01")[7])/filter(portfolioData, Date == "2016-04-01")[7]),
-                              ((filter(portfolioData, Date == "2018-03-01")[7] - filter(portfolioData, Date == "2017-04-01")[7])/filter(portfolioData, Date == "2017-04-01")[7]),
-                              ((filter(portfolioData, Date == "2019-03-01")[7] - filter(portfolioData, Date == "2018-04-01")[7])/filter(portfolioData, Date == "2018-04-01")[7]),
-                              ((filter(portfolioData, Date == "2020-03-01")[7] - filter(portfolioData, Date == "2019-04-01")[7])/filter(portfolioData, Date == "2019-04-01")[7]),
-                              ((filter(portfolioData, Date == "2021-03-01")[7] - filter(portfolioData, Date == "2020-04-01")[7])/filter(portfolioData, Date == "2020-04-01")[7]))
 
-avgAnnualReturnTbl <- rbind(avgAnnualReturnFilter[[1]],
-                            avgAnnualReturnFilter[[2]],
-                            avgAnnualReturnFilter[[3]],
-                            avgAnnualReturnFilter[[4]],
-                            avgAnnualReturnFilter[[5]])
-avgAnnualReturnTbl$Asset <- c(levels(allMnthClose$id))
-avgAnnualReturnTbl$Year <- c(rep(c(2017, 2018, 2019, 2020, 2021), times = c(10, 10, 10, 10, 10)))
-colnames(avgAnnualReturnTbl)[1] <- c("Average Annual Return")
+# Average Monthly + Annual Return Table -----------------------------------
+#Am i supposed to find the average return for each asset over the past 5 years for both monthly and annual? 
+#What is the formula?
 
-#Plot
-avgAnnualReturnPlot <- ggplot(avgAnnualReturnTbl, aes(x = Year, y = `Average Annual Return`)) +
-  geom_point() +
-  facet_wrap(~Asset) +
-  labs(title = "Average Annual Return RiD Portfolio") +
-  ggthemes::theme_solarized()
 
-ggplotly(avgAnnualReturnPlot, dynamicTicks = TRUE) %>%
-  layout(title = list(text = paste0("Average Annual Return RiD Portfolio (Year Start April 01)")))
+
+
 
 # Annual Portfolio Std Deviations ---------------------------------------------
-#Mnth Returns * Sqrt(12)
-#Maybe add monthly return for mar 01 2016
-#EDIT mod workaround
-allMnthCloseMod <- allMnthClose
-allMnthCloseMod[600,] <- allMnthClose[599,]
-allMnthCloseMod[600, 2] <- as.Date("2021-03-01")
+#get annual standard dev for each asset by apply sd to lists of 12
 
-annPortfolioSdSplit <- split(allMnthCloseMod, rep(1:50, each = 12))
+#Annualized Sd == Mnth Returns * Sqrt(12)
+sdAnnFun <- function(x){
+  sd(x, na.rm = TRUE)*sqrt(12)
+}
 
+portfolioDataAnnSd <- portfolioData %>%
+  split(rep(1:50, each = 12)) %>%
+  lapply("[", c("MthRt"))
 
-#comical sd workaround learn purrr
-testy <- sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`1`[9])))))
-
-annPortfolioSdList <- list(sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`1`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`2`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`3`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`4`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`5`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`6`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`7`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`8`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`9`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`10`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`11`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`12`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`13`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`14`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`15`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`16`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`17`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`18`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`19`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`20`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`21`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`22`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`23`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`24`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`25`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`26`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`27`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`28`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`29`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`30`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`31`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`32`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`33`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`34`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`35`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`36`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`37`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`38`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`39`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`40`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`41`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`42`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`43`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`44`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`45`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`46`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`47`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`48`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`49`[9]))))),
-                           sd(as.numeric(unlist(transpose(list(annPortfolioSdSplit$`50`[9])))))
-)
-
-unique(portfolioData$id)
-annPortfolioSdListYrs <-  c(rep(c(2017, 2018, 2019, 2020, 2021), times = c(10)))
-annPortfolioSdListNms <- c(rep(c("Abbott",
-                                 "Amazon",
-                                 "Dollar General",
-                                 "JPMorg",
-                                 "LiveNat",
-                                 "Marriott",
-                                 "Toyota",
-                                 "UNHealth",
-                                 "VGETF",
-                                 "VGIndex"), times = c(10)))
-
-annPortfolioSdListNms <- as.character(unlist(annPortfolioSdListNms))
-annPortfolioSdList <-  as.numeric(unlist(annPortfolioSdList))
-annPortfolioSdListYrs <- as.numeric(unlist(annPortfolioSdListYrs))
-annPortfolioSdFinal <- cbind(annPortfolioSdListNms, annPortfolioSdList, annPortfolioSdListYrs)
-annPortfolioSdFinal <- unlist(annPortfolioSdFinal)
-annPortfolioSdFinal <- as.tibble(annPortfolioSdFinal)
-annPortfolioSdFinal$annPortfolioSdListYrs <- as.Date(annPortfolioSdFinal$annPortfolioSdListYrs, format = "%Y")
-annPortfolioSdFinal
-
-
-
-
-
-
-
-
-
-
-
-
-
+#Apply sd to each list after converting to dbl
 
 
 

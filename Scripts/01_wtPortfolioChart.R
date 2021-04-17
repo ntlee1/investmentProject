@@ -10,37 +10,39 @@ pkgReq <- c("tidyverse",
             "RColorBrewer",
             "readxl",
             "scales",
-            "ggthemes"
+            "ggthemes",
+            "magrittr",
+            "rlist"
             )
 lapply(pkgReq, require, character.only = TRUE)
 
 # Create Asset Weights ------------------------------------------------------
 asset <- 
   tibble(
-  x = c("AbbottLabs",
-                "Amazon",
-                "DollarGeneral",
-                "JPMorganChase",
-                "LiveNation",
-                "Marriott",
-                "Toyota",
-                "UnitedHealth",
-                "VGTechETF",
-                "VG500IndexFund"),
+    x = c("Abbott",
+          "Amazon",
+          "Dollar General",
+          "JPMorg",
+          "LiveNat",
+          "Marriott",
+          "Toyota",
+          "UNHealth",
+          "VGETF",
+          "VG500Index"),
   
   )
 
-levelsStock <- as.factor(c("AbbottLabs",
+levelsStock <- as.factor(c("Abbott",
                            "Amazon",
-                           "DollarGeneral",
-                           "JPMorganChase",
-                           "LiveNation",
+                           "Dollar General",
+                           "JPMorg",
+                           "LiveNat",
                            "Marriott",
                            "Toyota",
-                           "UnitedHealth"))
+                           "UNHealth"))
 
-levelsIndexEtf <- as.factor(c("VGTechETF",
-                              "VG500IndexFund"))
+levelsIndexEtf <- as.factor(c("VGETF",
+                              "VG500Index"))
 
 # Weights Randomizer ------------------------------------------------------
 #Randomize weights for each asset class to create balanced stock picks and to hedge against picking and staying with any one bad stock long run
@@ -70,12 +72,12 @@ colnames(portfolioStock) <- c("Asset","2021", "2030", "2040")
 portfolioEtfIndex <- cbind(levelsIndexEtf, weightsAllEtfIndexAll)
 colnames(portfolioEtfIndex) <- c("Asset","2021", "2030", "2040")
 
-portfolioMaster <- rbind(portfolioStock, portfolioEtfIndex)
+portfolioWeights <- rbind(portfolioStock, portfolioEtfIndex)
 
 
 
 # Plot Asset Weights ------------------------------------------------------
-plotWeights <- ggplot(portfolioMaster, aes(x = Asset)) +
+plotWeights <- ggplot(portfolioWeights, aes(x = Asset)) +
   geom_point(aes(y = `2021`, colour = "2021"),
              size = 4) +
   geom_point(aes(y = `2030`, colour = "2030"),
